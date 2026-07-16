@@ -17,10 +17,20 @@ opened against this fork (PR creation is open to everyone), builds attacker-cont
 code with `id-token: write`. Latent RCE the day a self-hosted runner labeled `pr`
 is registered.
 
-**UI:** repo → *Actions* tab → in the left sidebar select **"continuous integration
-(mathlib forks)"** → `…` menu (top right) → **Disable workflow**.
+> **Verified 2026-07-16:** `build_fork.yml` is **not yet registered** as a workflow on
+> the fork (GitHub registers `pull_request_target` workflows lazily, on first trigger;
+> no PR has ever been opened against this repo — API lookup 404s and it is absent from
+> all 48 registered workflows). Consequence: it **cannot be individually disabled yet**,
+> in the UI or via API. Until it registers, the only effective mitigations are
+> P0.2 Option A (disable Actions repo-wide — recommended) or, if Actions must stay on,
+> disabling it the moment it appears (it registers on the first PR; the job itself
+> merely queues against the nonexistent `pr` runner label, so there is a window to act
+> before any self-hosted runner exists).
 
-**CLI:**
+**UI (once registered):** repo → *Actions* tab → left sidebar →
+**"continuous integration (mathlib forks)"** → `…` menu (top right) → **Disable workflow**.
+
+**CLI (once registered):**
 ```sh
 gh workflow disable build_fork.yml -R DarcStar-Technologies/mathlib4
 # or, equivalently:
@@ -29,6 +39,9 @@ gh api -X PUT repos/DarcStar-Technologies/mathlib4/actions/workflows/build_fork.
 
 **Acceptance:** `gh workflow list -R DarcStar-Technologies/mathlib4 --all | grep build_fork`
 shows `disabled_manually`; a test PR triggers no "continuous integration (mathlib forks)" run.
+Also unregistered today (same lazy-registration reason, same handling): `bors.yml`,
+`ci_dev.yml`, `bot_fix_style.yaml`, `labels_from_comment.yml`, `splice_bot.yaml`,
+`splice_bot_wf_run.yaml`, `sync_closed_tasks.yaml`, `label_new_contributor.yml`.
 
 > Do **not** delete or edit the file: upstream edits it regularly and any in-tree change
 > creates recurring sync conflicts (doctrine §4.6). The disabled state lives in repo
@@ -41,10 +54,11 @@ shows `disabled_manually`; a test PR triggers no "continuous integration (mathli
 
 ## P0.2 — Actions posture
 
-**Option A (recommended): disable Actions repo-wide.**
+**Option A (recommended — and currently the only complete fix): disable Actions repo-wide.**
 The fork is a pure mirror; sync automation will live outside the repo (P1.1). This one
-setting kills all ~220 junk skipped runs/day, neutralizes every inherited workflow
-including `build_fork.yml` (making P0.1 belt-and-braces), and is one click to revert.
+setting kills all ~220 junk skipped runs/day, neutralizes every inherited workflow —
+including the not-yet-registered `build_fork.yml`, which nothing else can disable today
+(see P0.1) — and is one click to revert.
 
 **UI:** repo → *Settings* → *Actions* → *General* → **Actions permissions** →
 select **"Disable actions"** → Save.
