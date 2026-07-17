@@ -95,13 +95,6 @@ file used by the library's own linters.
   Other subcommands to automate git-related actions may be added in the future.
 
 **Analyzing Mathlib's import structure**
-- `unused_in_pole.sh` (followed by an optional `<target>`, defaulting to `Mathlib`)
-  calls `lake exe pole --loc --to <target>` to compute the longest
-  pole to a given target module, and then feeds this into
-  `lake exe unused` to analyze transitively unused imports.
-  Generates `unused.md` containing a markdown table showing the unused imports,
-  and suggests `lake exe graph` commands to visualize the largest "rectangles" of unused imports.
-
 - `topological_sort.py`
   Prints Mathlib modules in topological (import-DAG) order. By default leaves come last
   (roots first); use `--reverse` for leaves first. If filenames or module names are
