@@ -1,0 +1,50 @@
+# CI for the DarcStar overlay package.
+#
+# The contract this asserts: mathlib arrives ENTIRELY from upstream's binary
+# cache (because our pinned rev is a bors-green upstream master commit, reachable
+# via the DarcStar mirror), and only DarcstarLean's own modules compile here.
+# If the cache ever misses (rev not on upstream master / root-file divergence /
+# cache outage), the 25-minute step timeout fails the build instead of silently
+# compiling mathlib from source for hours.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://elan.lean-lang.org/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Get mathlib cache
+        timeout-minutes: 15
+        run: lake exe cache get
+
+      - name: Build (org code only — cache must cover all of mathlib)
+        timeout-minutes: 25
+        run: lake build
+
+      - name: Report toolchain and pin
+        run: |
+          lake env lean --version
+          grep -m1 '"name": "mathlib"' -A0 lake-manifest.json || true
+          sed -n 's/^rev = /mathlib rev = /p' lakefile.toml
